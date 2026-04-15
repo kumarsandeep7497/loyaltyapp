@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Loyalty Card</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+</head>
+<body style="text-align:center; padding:50px;">
+    <h1>Your Berlin Loyalty Pass</h1>
+    <p>Enter your email to get your unique code:</p>
+    <input type="email" id="emailInput" placeholder="email@example.com">
+    <button onclick="generate()">Generate QR</button>
+    <br><br>
+    <canvas id="qrcode"></canvas>
+
+    <script>
+        function generate() {
+            const email = document.getElementById('emailInput').value;
+            if(!email) return alert("Please enter your email");
+            QRCode.toCanvas(document.getElementById('qrcode'), email);
+        }
+    </script>
+</body>
+</html>
