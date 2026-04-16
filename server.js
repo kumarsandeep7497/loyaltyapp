@@ -1,65 +1,62 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const bodyParser = require('body-parser');
+const path = require('path');
+
 const app = express();
-const port = 3000;
-
-app.use(express.json());
-app.use(express.static('.'));
-
-// 1. Connect to the database
 const db = new sqlite3.Database('./loyalty.db');
 
-// 2. Initialize the table structure
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname)));
+
+// Initialize Tables
 db.serialize(() => {
-    db.run("CREATE TABLE IF NOT EXISTS customers (email TEXT PRIMARY KEY, current_stamps INTEGER DEFAULT 0)");
-    console.log("Database initialized and ready.");
+    db.run("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, email TEXT, name TEXT, current_stamps INTEGER)");
+    db.run("CREATE TABLE IF NOT EXISTS shop_settings (id INTEGER PRIMARY KEY, name TEXT, message TEXT, banner_image TEXT)");
+    
+    // Insert default settings if table is empty
+    db.get("SELECT * FROM shop_settings WHERE id = 1", (err, row) => {
+        if (!row) {
+            db.run("INSERT INTO shop_settings (id, name, message, banner_image) VALUES (1, 'Your Cafe Name', 'Buy 6 coffees, get the 7th free!', '')");
+        }
+    });
 });
 
-// 3. The main Stamp Logic
-app.post('/add-stamp', (req, res) => {
-    const { email } = req.body;
-    if (!email) return res.status(400).send("No email provided");
+// --- API ROUTES ---
 
+// Get Shop Settings
+app.get('/api/settings', (req, res) => {
+    db.get("SELECT * FROM shop_settings WHERE id = 1", (err, row) => res.json(row));
+});
+
+// Update Shop Settings
+app.post('/api/settings', (req, res) => {
+    const { name, message, banner_image } = req.body;
+    db.run("UPDATE shop_settings SET name = ?, message = ?, banner_image = ? WHERE id = 1", 
+    [name, message, banner_image], () => res.json({ success: true }));
+});
+
+// Add Stamp (Used by Scanner)
+app.post('/add-stamp', (req, res) => {
+    const { email, name } = req.body;
     const cleanEmail = email.toLowerCase().trim();
 
-    db.get("SELECT current_stamps FROM customers WHERE email = ?", [cleanEmail], (err, row) => {
-        if (err) return res.status(500).send("Database Error");
-
+    db.get("SELECT * FROM customers WHERE email = ?", [cleanEmail], (err, row) => {
         if (row) {
-            const newCount = row.current_stamps + 1;
-
-            if (newCount >= 10) {
-                // RESET LOGIC: Set stamps to 0 because they earned the reward
-                db.run("UPDATE customers SET current_stamps = 0 WHERE email = ?", [cleanEmail], (err) => {
-                    res.send(`REWARD EARNED! 🏆\nTotal: 10 Stamps!\n\nStamps have been reset to 0.\nCustomer can start earning again!`);
-                });
-            } else {
-                // NORMAL UPDATE: Just add 1
-                db.run("UPDATE customers SET current_stamps = ? WHERE email = ?", [newCount, cleanEmail], (err) => {
-                    res.send(`Stamp Added! ✅\nCustomer: ${cleanEmail}\nTotal Stamps: ${newCount}`);
-                });
-            }
+            let newStamps = row.current_stamps + 1;
+            db.run("UPDATE customers SET current_stamps = ? WHERE email = ?", [newStamps, cleanEmail]);
+            res.send(`Stamp added! Total: ${newStamps}`);
         } else {
-            // NEW USER
-            db.run("INSERT INTO customers (email, current_stamps) VALUES (?, 1)", [cleanEmail], (err) => {
-                res.send(`Welcome! First Stamp Added. ✅\nTotal: 1`);
-            });
+            db.run("INSERT INTO customers (email, name, current_stamps) VALUES (?, ?, 1)", [cleanEmail, name || 'Customer']);
+            res.send("Welcome! First stamp added.");
         }
     });
 });
 
-// Route to get all customer data for the Merchant Dashboard
+// Get Dashboard Data
 app.get('/dashboard-data', (req, res) => {
-    db.all("SELECT email, current_stamps FROM customers ORDER BY current_stamps DESC", [], (err, rows) => {
-        if (err) {
-            res.status(500).send("Error fetching data");
-            return;
-        }
-        res.json(rows); // Sends the list as JSON
-    });
+    db.all("SELECT * FROM customers", (err, rows) => res.json(rows));
 });
 
-const PORT = process.env.PORT || 3000; // Use the provider's port or 3000
-app.listen(PORT, () => {
-    console.log(`Service running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
