@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Loyalty Card</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+        .card { background-color: #f2efe4; width: 320px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #promo-img { width: 100%; border-radius: 10px; margin-bottom: 15px; display: none; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .brand { font-weight: bold; font-size: 18px; color: #1a2b56; }
+        .stamp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .slot { height: 50px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.05); border-radius: 10px; border: 1px dashed #ccc; font-size: 12px; }
+        .active { background: white; border: 2px solid #1a2b56; color: #1a2b56; font-weight: bold; }
+        .qr-box { background: white; padding: 15px; border-radius: 15px; width: fit-content; margin: 20px auto; }
+        .footer { font-size: 11px; text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img id="promo-img" src="">
+        <div class="header">
+            <div id="shop-name" class="brand">Shop</div>
+            <div>STAMPS: <strong id="count">0</strong></div>
+        </div>
+        <div class="stamp-grid" id="grid"></div>
+        <div style="font-size: 10px; font-weight: bold;">NAME</div>
+        <div id="user-name" style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">...</div>
+        <div class="qr-box"><div id="qrcode"></div></div>
+        <div id="msg" class="footer"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const email = params.get('email');
+        const name = params.get('name');
+        document.getElementById('user-name').innerText = name;
+
+        new QRCode(document.getElementById("qrcode"), { text: email, width: 130, height: 130 });
+
+        async function init() {
+            const settings = await (await fetch('/api/settings')).json();
+            document.getElementById('shop-name').innerText = settings.name;
+            document.getElementById('msg').innerText = settings.message;
+            if(settings.banner_image) {
+                document.getElementById('promo-img').src = settings.banner_image;
+                document.getElementById('promo-img').style.display = 'block';
+            }
+
+            const users = await (await fetch('/dashboard-data')).json();
+            const me = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            const stamps = me ? me.current_stamps : 0;
+            document.getElementById('count').innerText = stamps;
+
+            const grid = document.getElementById('grid');
+            for (let i = 1; i <= 6; i++) {
+                const div = document.createElement('div');
+                div.className = 'slot' + (i <= stamps ? ' active' : '');
+                div.innerText = i <= stamps ? 'LAP' : i;
+                grid.appendChild(div);
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

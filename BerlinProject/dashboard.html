@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Merchant Dashboard</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; font-weight: bold; }
+        .btn-blue { background: #1a2b56; color: white; }
+        .btn-green { background: #28a745; color: white; width: 100%; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Shop Manager</h1>
+        <div class="box">
+            <h3>Card Branding</h3>
+            <label>Shop Name</label><input type="text" id="sn">
+            <label>Offer Message</label><input type="text" id="sm">
+            <label>Banner Image URL</label><input type="text" id="sb">
+            <button class="btn-blue" onclick="save()">Update My Brand</button>
+        </div>
+        <h3>Customer List</h3>
+        <button class="btn-green" onclick="load()">Refresh List</button>
+        <table>
+            <thead><tr><th>Email</th><th>Stamps</th></tr></thead>
+            <tbody id="list"></tbody>
+        </table>
+    </div>
+    <script>
+        async function save() {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: document.getElementById('sn').value, message: document.getElementById('sm').value, banner_image: document.getElementById('sb').value})
+            });
+            alert("Settings Saved!");
+        }
+        async function load() {
+            const settings = await (await fetch('/api/settings')).json();
+            document.getElementById('sn').value = settings.name;
+            document.getElementById('sm').value = settings.message;
+            document.getElementById('sb').value = settings.banner_image;
+
+            const data = await (await fetch('/dashboard-data')).json();
+            const list = document.getElementById('list');
+            list.innerHTML = data.map(c => `<tr><td>${c.email}</td><td>${c.current_stamps} / 6</td></tr>`).join('');
+        }
+        load();
+    </script>
+</body>
+</html>
