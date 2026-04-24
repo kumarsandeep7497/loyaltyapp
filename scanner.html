@@ -1,0 +1,22 @@
+function onScanSuccess(decodedText, decodedResult) {
+    // decodedText is the customer's email from the QR code
+    
+    fetch('/api/add-stamp', { // <--- Changed from '/add-stamp'
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            email: decodedText,
+            name: "Loyalty Customer" // Optional: the name if you have it
+        }),
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert(data); // Shows "Stamp added!" or "First stamp added!"
+    })
+    .catch(err => {
+        console.error("Error adding stamp:", err);
+        alert("Failed to add stamp. Check connection.");
+    });
+}
