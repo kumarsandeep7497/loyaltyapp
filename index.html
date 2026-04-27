@@ -1,33 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Join Loyalty Program</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loyalty Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #f0f0f0; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .form-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #1a2b56; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .stamp-box {
+            width: 50px;
+            height: 50px;
+            border: 2px dashed #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #9ca3af;
+        }
+        .stamped {
+            border: none;
+            background-color: #f59e0b; /* Golden Yellow */
+            color: white;
+            content: '🍕';
+        }
     </style>
 </head>
-<body>
-    <div class="form-box">
-        <h2 id="display-name">Loading...</h2>
-        <input type="text" id="name" placeholder="Full Name">
-        <input type="email" id="email" placeholder="Email Address">
-        <button onclick="go()">Get My Card</button>
-    </div>
-    <script>
-        // Fetches shop branding from the Vercel API
-        fetch('/api/settings').then(res => res.json()).then(data => {
-            document.getElementById('display-name').innerText = data.name;
-        });
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
-        function go() {
-            const n = document.getElementById('name').value;
-            const e = document.getElementById('email').value;
-            if(n && e) window.location.href = `customer.html?name=${encodeURIComponent(n)}&email=${encodeURIComponent(e)}`;
+    <div id="card" class="bg-[#f3f0e7] p-8 rounded-3xl shadow-xl w-80 text-center relative">
+        <h2 id="status" class="text-gray-400 font-bold mb-4 uppercase tracking-widest">Loading...</h2>
+        
+        <div class="mb-4">
+            <p class="text-xs text-gray-500 uppercase">Name</p>
+            <p id="userName" class="text-xl font-bold text-gray-800">---</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 justify-items-center mb-6" id="stampGrid">
+            <div class="stamp-box">1</div>
+            <div class="stamp-box">2</div>
+            <div class="stamp-box">3</div>
+            <div class="stamp-box">4</div>
+            <div class="stamp-box">5</div>
+            <div class="stamp-box">6</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl inline-block shadow-sm">
+            <img id="qrCode" src="" alt="QR Code" class="w-32 h-32">
+        </div>
+
+        <div id="rewardMsg" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg font-bold">
+            🎉 REWARD READY! <br> Show this to get your free pizza.
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email') || 'test@gmail.com'; // Default for testing
+
+        async function loadData() {
+            try {
+                const response = await fetch(`/api/get-data?email=${email}`);
+                const data = await response.json();
+
+                document.getElementById('userName').innerText = data.name || 'Customer';
+                const stamps = data.stamps || 0;
+                
+                const boxes = document.querySelectorAll('.stamp-box');
+                
+                // Update boxes and check for reward
+                boxes.forEach((box, i) => {
+                    if (i < stamps) {
+                        box.classList.add('stamped');
+                        box.innerText = '🍕';
+                    }
+                });
+
+                if (stamps >= 6) {
+                    document.getElementById('status').innerText = "REWARD UNLOCKED";
+                    document.getElementById('rewardMsg').classList.remove('hidden');
+                } else {
+                    document.getElementById('status').innerText = `STAMPS: ${stamps} / 6`;
+                }
+
+                // Generate QR Code URL
+                document.getElementById('qrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${email}`;
+
+            } catch (err) {
+                console.error("Error:", err);
+                document.getElementById('status').innerText = "Error Loading Card";
+            }
         }
+
+        loadData();
     </script>
 </body>
 </html>
